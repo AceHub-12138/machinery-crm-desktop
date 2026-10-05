@@ -27,7 +27,7 @@
 - `src/components/layout/topbar.tsx`、`src/app/(app)/settings/page.tsx`、`src/app/login/page.tsx`（入口接线）
 
 无需数据库变更，无需 env 变更（下载目录默认取 `UPLOAD_DIR/downloads`，生产即
-`/opt/machinery-crm-uploads/downloads`；如需独立目录可设 `DOWNLOAD_DIR`）。
+`<UPLOAD_DIR>/downloads`；如需独立目录可设 `DOWNLOAD_DIR`）。
 
 **宝塔/Nginx 注意**：无需新增任何静态 location，下载走 Next.js 进程。这与现有
 "禁止 Nginx 直出 uploads"的安全要求一致。
@@ -37,7 +37,7 @@
 在服务器创建目录并只上传 3 个文件：
 
 ```
-/opt/machinery-crm-uploads/downloads/desktop/
+<UPLOAD_DIR>/downloads/desktop/
 ├── DachuanPro-Setup-1.1.0.exe            （安装包）
 ├── DachuanPro-Setup-1.1.0.exe.blockmap   （增量更新块图，必须与 exe 同版本成对）
 └── latest.yml                             （版本清单）
@@ -81,8 +81,9 @@ curl -I https://dachuan.pro/api/downloads/desktop/latest.yml
 - 已知通用前提：NSIS 静默安装 perMachine=false 时无 UAC 交互，Windows 对未签名安装包的
   SmartScreen 提示与现状一致（首次安装时可能"仍要运行"）。
 
-## 六、本次本地验证时改动过的环境（如实说明）
+## 六、2026-10-05 更新源加固
 
-- 本地 Docker MySQL（crm-mysql-local，开发测试库）中 `admin@dachuan.local` 的密码哈希被
-  我重置为本地测试值以便登录验证；该库仅为本地 seed 数据库，非生产。如需恢复请重跑 seed。
-- 桌面端新增 `--dc-user-data=<目录>` 隔离参数（正式功能，用于测试实例与正式实例并存）。
+- 正式更新来源固定为 `https://dachuan.pro/api/downloads/desktop`，登录服务器配置、渲染进程、环境变量和启动参数均不能覆盖。
+- 本地 HTTP/LAN 更新演练不再适用于正式客户端；第五节为历史验收记录，本次仅验证单测、构建和静态检查，未执行 Windows 安装升级。
+- 发布时先上传同版 exe 与 blockmap，再发布 latest.yml；保留上一版文件便于回滚和进行中的下载，不按第三节历史步骤立即删除旧文件。
+- 正式 Windows 签名证书与签名后的安装/升级验收需在发行环境完成；当前仓库不能代替这项验证。

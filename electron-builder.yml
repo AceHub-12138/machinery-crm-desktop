@@ -14,7 +14,7 @@ files:
 asar: true
 
 # 应用内自动更新：generic 提供商，latest.yml + exe + blockmap 上传到平台服务器下载目录
-# 平台公开下载路由：/api/downloads/desktop/<文件名>（目录 /opt/machinery-crm-uploads/downloads/desktop）
+# 平台公开下载路由：/api/downloads/desktop/<文件名>（目录由服务端环境配置）
 publish:
   provider: generic
   url: "https://dachuan.pro/api/downloads/desktop"
