@@ -1,0 +1,38 @@
+appId: pro.dachuan.desktop
+productName: 大川Pro工作台
+copyright: 山东大川重工机床股份有限公司
+
+directories:
+  output: release
+  buildResources: build
+
+files:
+  - dist/**
+  - dist-electron/**
+  - package.json
+
+asar: true
+
+# 应用内自动更新：generic 提供商，latest.yml + exe + blockmap 上传到平台服务器下载目录
+# 平台公开下载路由：/api/downloads/desktop/<文件名>（目录 /opt/machinery-crm-uploads/downloads/desktop）
+publish:
+  provider: generic
+  url: "https://dachuan.pro/api/downloads/desktop"
+  channel: latest
+
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  # 内部分发，暂不做代码签名（无证书时自动跳过签名，仅打警告）
+  # exe 资源编辑保持开启：把官方徽标写入 exe 图标/版本信息
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: 大川Pro工作台
+  artifactName: DachuanPro-Setup-${version}.exe
