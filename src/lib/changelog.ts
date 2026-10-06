@@ -10,6 +10,15 @@ export const APP_NAME = "大川Pro CRM桌面版";
 
 export const CHANGELOG: VersionRelease[] = [
   {
+    version: "1.2.1",
+    date: "2026-10-05",
+    notes: [
+      "修复更新来源可被篡改的问题：自动更新固定官方地址，登录页服务器配置、环境变量和启动参数均不能覆盖",
+      "更新检查失败后可正常重试，不再卡在「正在检查」",
+      "修复部分电脑上日期显示偏差",
+    ],
+  },
+  {
     version: "1.2.0",
     date: "2026-09-22",
     notes: [

@@ -1,6 +1,6 @@
 {
   "name": "dachuanpro-desktop",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "private": true,
   "description": "大川Pro CRM/ERP Windows 桌面工作台",
   "main": "dist-electron/main.cjs",
