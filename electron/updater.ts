@@ -7,7 +7,7 @@ import { updateFeedUrl } from "./update-feed";
 // ---------- 应用内自动更新 ----------
 // feed 指向平台公开下载目录（/api/downloads/desktop，免登录）：
 // 发布流程 = 出包后把 exe + exe.blockmap + latest.yml 三个文件传到服务器
-// /opt/machinery-crm-uploads/downloads/desktop/ 即完成一次发版，老客户端自动提示更新。
+// 服务端下载目录采用部署环境配置；发布清单完成后老客户端自动提示更新。
 // 默认"提示后手动更新"：检测到新版本只通知渲染端，用户点"立即更新"才下载。
 
 function diag(line: string) {
@@ -30,14 +30,6 @@ export type UpdateEvent =
 /** 默认 feed：跟随 electron-builder.yml 的 publish 配置（平台正式服务器） */
 const DEFAULT_FEED = "https://dachuan.pro/api/downloads/desktop";
 
-/** 本地联调可用 --dc-update-url=<地址> 或环境变量 DC_UPDATE_URL 覆盖 feed（如指向本机静态目录） */
-function resolveFeedOverride(): string | null {
-  const arg = process.argv.find((a) => a.startsWith("--dc-update-url="));
-  const raw = arg ? arg.slice("--dc-update-url=".length) : process.env.DC_UPDATE_URL;
-  const value = (raw || "").trim().replace(/\/+$/, "");
-  return /^https?:\/\//i.test(value) ? value : null;
-}
-
 let lastEvent: UpdateEvent = { type: "idle" };
 let checking = false;
 
@@ -55,9 +47,9 @@ function updateDisabledReason(): string | null {
   return null;
 }
 
-function applyFeed(baseUrl?: string) {
-  const override = resolveFeedOverride();
-  const url = override || updateFeedUrl(baseUrl, DEFAULT_FEED);
+function applyFeed() {
+  // 更新信任根固定在主进程；不读取渲染端服务器地址、环境变量或启动参数。
+  const url = updateFeedUrl(undefined, DEFAULT_FEED);
   // useMultipleRangeRequest=false：平台的下载路由只实现单段 Range（多段请求会回整包 200），
   // electron-updater 默认发多段请求 → 被判「服务器不支持」→ 回退整包下载（99.6MB）。
   // 改走单段 Range（服务器支持 206）后才能真正只下差异块（实测 1.1.0→1.1.1 只需 1.6% 流量）。
@@ -65,15 +57,15 @@ function applyFeed(baseUrl?: string) {
   return url;
 }
 
-async function checkForUpdates(baseUrl?: string): Promise<{ ok: boolean; disabled?: boolean; error?: string }> {
+async function checkForUpdates(): Promise<{ ok: boolean; disabled?: boolean; error?: string }> {
   const disabled = updateDisabledReason();
   if (disabled) return { ok: false, disabled: true, error: disabled };
   if (checking) return { ok: false, error: "正在检查更新" };
   checking = true;
   emit({ type: "checking" });
-  const url = applyFeed(baseUrl);
-  diag(`checking feed=${url}, current=v${app.getVersion()}`);
   try {
+    const url = applyFeed();
+    diag(`checking feed=${url}, current=v${app.getVersion()}`);
     await autoUpdater.checkForUpdates();
     return { ok: true };
   } catch (err) {
@@ -116,7 +108,7 @@ export function setupUpdater() {
   autoUpdater.on("error", (err) => emit({ type: "error", message: `更新失败：${(err as Error).message}` }));
 
   app.whenReady().then(() => {
-    // 启动 15 秒后静默检查一次（默认 feed），失败静默——渲染端登录后还会按当前服务器地址复查
+    // 启动 15 秒后静默检查一次（默认 feed），失败通过事件提示；后续检查始终使用官方源
     setTimeout(() => {
       void checkForUpdates();
     }, 15_000);
@@ -132,7 +124,7 @@ export function registerUpdaterIpc() {
 
   ipcMain.handle("app:update-state", () => lastEvent);
 
-  ipcMain.handle("app:update-check", async (_e, baseUrl?: string) => checkForUpdates(baseUrl));
+  ipcMain.handle("app:update-check", async () => checkForUpdates());
 
   ipcMain.handle("app:update-download", async () => {
     if (updateDisabledReason()) return { ok: false, error: "开发模式不支持更新" };

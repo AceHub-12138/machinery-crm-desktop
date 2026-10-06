@@ -28,8 +28,10 @@ test("服务器地址里已经带了下载目录时不再重复拼（曾导致 l
   assert.ok(!updateFeedUrl("https://dachuan.pro/api/downloads/desktop", DEFAULT_SERVER).includes(`${FEED_SUFFIX}${FEED_SUFFIX}`));
 });
 
-test("内网/测试服务器同样按服务器根拼", () => {
-  assert.equal(updateFeedUrl("http://192.168.1.10:3000", DEFAULT_SERVER), `http://192.168.1.10:3000${FEED_SUFFIX}`);
+test("拒绝 HTTP、非官方主机和 URL 伪装", () => {
+  for (const url of ["http://dachuan.pro", "http://192.168.1.10:3000", "https://evil.example", "https://dachuan.pro.evil.example", "https://dachuan.pro@evil.example", "https://user:pass@dachuan.pro", "https://dachuan.pro:8443", "https://dachuan.pro/other", "https://dachuan.pro?feed=evil", "file:///tmp"]) {
+    assert.throws(() => updateFeedUrl(url, DEFAULT_SERVER));
+  }
 });
 
 test("服务器地址为空时回落到默认服务器", () => {

@@ -21,5 +21,10 @@ export function normalizeServerBase(baseUrl?: string | null): string {
 /** 由服务器地址拼出更新 feed；baseUrl 为空时用默认服务器 */
 export function updateFeedUrl(baseUrl: string | null | undefined, defaultServer: string): string {
   const base = normalizeServerBase(baseUrl) || normalizeServerBase(defaultServer);
-  return `${base}${FEED_SUFFIX}`;
+  const url = new URL(base);
+  if (url.protocol !== "https:" || url.hostname !== "dachuan.pro" || url.port || url.username || url.password
+    || url.search || url.hash || url.pathname !== "/") {
+    throw new Error("更新源必须使用官方 HTTPS 地址");
+  }
+  return `${url.origin}${FEED_SUFFIX}`;
 }
