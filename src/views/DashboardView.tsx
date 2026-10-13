@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
+import { CurrencyAmounts } from "../components/currency-amounts";
+import { dashboardAmounts, type DashboardAmounts, type CurrencyAmount } from "../lib/currency";
 import { RefreshCw, ClipboardList, CalendarClock, Wrench, ArrowRight } from "lucide-react";
 import { api } from "../lib/api";
 import { getCachedUser } from "../lib/api";
-import { moneyShort, moneyFull, money, date, relativeTime, FOLLOW_TYPE, label, pillTone, AFTER_SALES_STATUS, AFTER_SALES_TYPE, URGENCY, PROVINCE_OPTIONS } from "../lib/format";
+import { date, relativeTime, FOLLOW_TYPE, label, pillTone, AFTER_SALES_STATUS, AFTER_SALES_TYPE, URGENCY, PROVINCE_OPTIONS } from "../lib/format";
 import { Spinner, Empty, ErrorTip, Pill, PageHeader, Segmented } from "../components/ui";
 import { CountUp, Ring } from "../components/fx";
 import { SalesTargetCard } from "../components/sales-target-card";
@@ -103,6 +105,7 @@ interface DashboardData {
   range?: { preset?: string; start?: string; end?: string; startDate?: string; endDate?: string };
   salesUsers?: SalesUserBrief[];
   stats: {
+    amountsByCurrency?: DashboardAmounts;
     totalCustomers: number;
     todayFollowUp: number;
     overdueFollowUp: number;
@@ -166,9 +169,11 @@ function Tile({
   delay = 0,
   href,
   title,
+  amounts,
 }: {
   label: string;
   value: number;
+  amounts?: CurrencyAmount[];
   format?: (n: number) => string;
   sub?: React.ReactNode;
   glow?: string;
@@ -176,15 +181,15 @@ function Tile({
   href?: string;
   title?: string;
 }) {
-  const className = `kpi-tile panel panel-hover fade-up flex w-full flex-col gap-1 px-4 py-3.5 text-left ${href ? "cursor-pointer" : ""}`;
+  const className = `kpi-tile panel panel-hover fade-up flex w-full flex-col gap-1 h-[152px] overflow-hidden px-4 py-3.5 text-left ${href ? "cursor-pointer" : ""}`;
   const body = (
     <>
       <span className="label flex items-center gap-1">
         {label}
         {href && <ArrowRight size={11} className="shrink-0 text-brand opacity-60" />}
       </span>
-      <span className={`mono text-[22px] font-semibold leading-tight whitespace-nowrap overflow-hidden text-ellipsis max-w-full ${glow}`}>
-        <CountUp value={value} format={format} />
+      <span className={`mono block w-full min-w-0 text-[22px] font-semibold leading-tight whitespace-nowrap overflow-hidden text-ellipsis max-w-full ${glow}`}>
+        {amounts ? <CurrencyAmounts rows={amounts} primarySize={22} /> : <CountUp value={value} format={format} />}
       </span>
       {sub !== undefined && <span className="text-xs text-faint">{sub}</span>}
     </>
@@ -371,9 +376,9 @@ export default function DashboardView() {
     <div className="flex-1 overflow-y-auto">
       <div className="mx-auto flex max-w-[1400px] flex-col gap-4 px-6 py-5">
         {/* 英雄区 */}
-        <div className="panel panel-glow relative overflow-hidden px-6 py-5">
+        <div className="panel panel-glow relative h-[280px] overflow-hidden px-6 py-5">
           <div className="pointer-events-none absolute -right-16 -top-24 h-64 w-64 rounded-full bg-[radial-gradient(circle,rgba(238,125,44,0.16),transparent_65%)]" />
-          <div className="relative flex items-center justify-between gap-6">
+          <div className="relative flex min-w-0 items-center justify-between gap-6">
             <div className="hero-block fade-up min-w-0">
               <div className="flex items-baseline gap-2.5">
                 <span className="text-lg font-semibold">
@@ -383,12 +388,10 @@ export default function DashboardView() {
                 <span className="text-xs text-faint">{cnDate()}</span>
               </div>
               <div className="mt-3 flex items-end gap-6">
-                <div>
+                <div className="w-[340px] max-w-full">
                   <div className="label">本期新增合同额</div>
                   <div className="mono text-brandhi num-glow mt-1 text-[40px] font-bold leading-none">
-                    <span className="mr-1 align-[6px] text-[22px] font-semibold">¥</span>
-                    <CountUp value={Number(stats?.periodContractAmount || 0)} format={(n) => Math.round(n).toLocaleString("zh-CN")} />
-                    <span className="ml-1.5 align-[2px] text-[15px] font-medium text-dim">元</span>
+                    <CurrencyAmounts rows={dashboardAmounts(stats?.amountsByCurrency, "periodContractAmount", stats?.periodContractAmount)} primarySize={40} />
                   </div>
                   <div className="mt-2 flex items-center gap-2 text-xs text-faint">
                     <span className="rounded-full bg-brand/12 px-2 py-0.5 text-brandhi">
@@ -405,11 +408,11 @@ export default function DashboardView() {
               </div>
             </div>
             <div className="hero-ring fade-up flex items-center gap-6" style={{ animationDelay: "120ms" }}>
-              <div className="hidden flex-col gap-2.5 md:flex">
-                <div className="min-w-[190px]">
+              <div className="hidden flex-col gap-1 md:flex">
+                <div className="w-[230px] min-w-0">
                   <div className="flex justify-between text-xs">
                     <span className="text-dim">已收</span>
-                    <span className="mono text-ok">{money(stats?.totalPaidAmount)}</span>
+                    <span className="mono min-w-0 flex-1 text-ok"><CurrencyAmounts rows={dashboardAmounts(stats?.amountsByCurrency, "totalPaidAmount", stats?.totalPaidAmount)} primarySize={14} /></span>
                   </div>
                   <div className="mt-1 h-2 overflow-hidden rounded-full bg-steel/20">
                     <div
@@ -418,10 +421,10 @@ export default function DashboardView() {
                     />
                   </div>
                 </div>
-                <div className="min-w-[190px]">
+                <div className="w-[230px] min-w-0">
                   <div className="flex justify-between text-xs">
                     <span className="text-dim">未收</span>
-                    <span className="mono text-warn">{money(stats?.totalUnpaidAmount)}</span>
+                    <span className="mono min-w-0 flex-1 text-warn"><CurrencyAmounts rows={dashboardAmounts(stats?.amountsByCurrency, "totalUnpaidAmount", stats?.totalUnpaidAmount)} primarySize={14} /></span>
                   </div>
                   <div className="mt-1 h-2 overflow-hidden rounded-full bg-steel/20">
                     <div
@@ -431,10 +434,10 @@ export default function DashboardView() {
                   </div>
                 </div>
                 <div className="text-xs text-faint">
-                  累计合同额 <span className="mono text-brandhi">{money(stats?.totalContractAmount)}</span>
+                  累计合同额 <span className="mono block text-brandhi"><CurrencyAmounts rows={dashboardAmounts(stats?.amountsByCurrency, "totalContractAmount", stats?.totalContractAmount)} primarySize={14} /></span>
                 </div>
               </div>
-              <Ring pct={paidRate} size={104} label="累计回款率" />
+              <Ring pct={paidRate} size={104} label="人民币回款率" />
             </div>
           </div>
         </div>
@@ -541,15 +544,15 @@ export default function DashboardView() {
           <>
             <div className="grid grid-cols-4 gap-3">
               <Tile delay={0} label="客户总数" value={stats.totalCustomers} sub={<>本期新增 <span className="mono text-brandhi">{stats.periodNewCustomers}</span></>} href="/customers" />
-              <Tile delay={60} label="本期回款" value={stats.periodPaidAmount} glow="text-ok num-glow-ok" format={(n) => moneyFull(n)} sub={`累计回款 ${moneyShort(stats.totalPaidAmount)}`} href={kpiHrefs.periodContractAmount} title="查看本期新建合同（已收合计与本期回款同源）" />
-              <Tile delay={120} label="未回款余额" value={stats.totalUnpaidAmount} glow="text-warn num-glow-warn" format={(n) => moneyFull(n)} sub={<>未收 <span className="mono">{stats.unpaidContracts}</span> 笔 · 部分 <span className="mono">{stats.partialPaidContracts}</span> 笔</>} href="/contracts?tab=unpaid" />
+              <Tile delay={60} label="本期回款" value={stats.periodPaidAmount} glow="text-ok num-glow-ok" amounts={dashboardAmounts(stats.amountsByCurrency, "periodPaidAmount", stats.periodPaidAmount)} sub="本期新建合同的已收款" href={kpiHrefs.periodContractAmount} title="查看本期新建合同（已收合计与本期回款同源）" />
+              <Tile delay={120} label="未回款余额" value={stats.totalUnpaidAmount} glow="text-warn num-glow-warn" amounts={dashboardAmounts(stats.amountsByCurrency, "totalUnpaidAmount", stats.totalUnpaidAmount)} sub={<>未收 <span className="mono">{stats.unpaidContracts}</span> 笔 · 部分 <span className="mono">{stats.partialPaidContracts}</span> 笔</>} href="/contracts?tab=unpaid" />
               <Tile delay={180} label="今日待跟进" value={stats.todayFollowUp} glow={stats.todayFollowUp > 0 ? "text-brandhi" : ""} sub={`近 7 日待跟进 ${stats.sevenDayFollowUp}`} href="/reminders?group=today" />
             </div>
             <div className="grid grid-cols-4 gap-3">
               <Tile delay={240} label="逾期未跟进" value={stats.overdueFollowUp} glow={stats.overdueFollowUp > 0 ? "text-bad num-glow-bad" : ""} sub="超过计划跟进日期" href="/reminders?group=overdue" />
               <Tile delay={300} label="今日应发货" value={stats.todayShipmentDue} glow={stats.todayShipmentDue > 0 ? "text-brandhi" : ""} sub={`7 日内应发 ${stats.sevenDayShipmentDue}`} href={SHIPMENT_REMINDER_HREFS.today} />
               <Tile delay={360} label="逾期未发货" value={stats.overdueShipmentDue} glow={stats.overdueShipmentDue > 0 ? "text-bad num-glow-bad" : ""} sub="超过预计发货日期" href={kpiHrefs.overdueShipmentDue} />
-              <Tile delay={420} label="累计合同额" value={stats.totalContractAmount} format={(n) => moneyShort(n)} sub={`累计回款 ${moneyShort(stats.totalPaidAmount)}`} href="/contracts" />
+              <Tile delay={420} label="累计合同额" value={stats.totalContractAmount} amounts={dashboardAmounts(stats.amountsByCurrency, "totalContractAmount", stats.totalContractAmount)} sub="全部合同按币种合计" href="/contracts" />
             </div>
 
             {/* 销售目标达成率：独立端点 /api/crm/sales-targets（工作台接口不含目标字段） */}

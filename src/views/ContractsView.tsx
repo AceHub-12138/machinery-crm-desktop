@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Search, RefreshCw, Plus, PenLine, CircleDollarSign, Unlock, Trash2, Paperclip } from "lucide-react";
+import { formatMoney, sumByCurrency } from "../lib/currency";
 import { api } from "../lib/api";
 import { PAYMENT_STATUS, CONTRACT_STATUS, SHIPMENT_STATUS, PROVINCE_OPTIONS, label, pillTone, money, date } from "../lib/format";
 import { Spinner, Empty, ErrorTip, Pill, Sheet, Field, Dash, PageHeader, Segmented, showToast, ConfirmDialog } from "../components/ui";
@@ -81,14 +82,8 @@ export default function ContractsView({ initialFilters, focusId }: { initialFilt
 
   // 合计与工作台 KPI 同源：工作台「本期回款」= 本期新建合同的 paidAmount 之和，
   // 所以这里必须把已收/未收合计露出来，点进来才能对上数。
-  const totals = (rows || []).reduce(
-    (acc, c) => ({
-      amount: acc.amount + Number(c.amount || 0),
-      paid: acc.paid + Number(c.paidAmount || 0),
-      unpaid: acc.unpaid + Number(c.unpaidAmount || 0),
-    }),
-    { amount: 0, paid: 0, unpaid: 0 },
-  );
+  const groupedTotal = (field: "amount" | "paidAmount" | "unpaidAmount") => sumByCurrency(rows || [], field).map(row => formatMoney(row.amount, row.currency)).join(" + ") || formatMoney(0);
+
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
@@ -97,7 +92,7 @@ export default function ContractsView({ initialFilters, focusId }: { initialFilt
           title="合同管理"
           sub={
             rows
-              ? `共 ${rows.length} 份 · 合同额 ${money(totals.amount)} · 已收 ${money(totals.paid)} · 未收 ${money(totals.unpaid)}`
+              ? `共 ${rows.length} 份 · 合同额 ${groupedTotal("amount")} · 已收 ${groupedTotal("paidAmount")} · 未收 ${groupedTotal("unpaidAmount")}`
               : "加载中…"
           }
         >
